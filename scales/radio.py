@@ -69,13 +69,12 @@ class Radio(Extension):
         channel = self.bot.get_channel(channel_id)
         member = event.before.member if event.before else event.after.member
 
-        if member.id != self.bot.user.id:
-            if channel.name == "lofi-radio":
-                vc = self.bot.get_bot_voice_state(channel.guild.id)
-                if not vc and event.after is not None:
-                    return await self.start_radio(channel)
-                else:
-                    asyncio.create_task(self.should_leave(channel))
+        if member.id != self.bot.user.id and channel.name == "lofi-radio":
+            vc = self.bot.get_bot_voice_state(channel.guild.id)
+            if not vc and event.after is not None:
+                return await self.start_radio(channel)
+            else:
+                asyncio.create_task(self.should_leave(channel))
 
     async def start_radio(self, channel: GuildVoice):
         vc = await channel.connect(deafened=True)

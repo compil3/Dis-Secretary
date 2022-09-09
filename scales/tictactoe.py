@@ -88,9 +88,7 @@ def determine_win_state(board: list, player: GameState) -> bool:
         [board[0][0], board[1][1], board[2][2]],
         [board[2][0], board[1][1], board[0][2]],
     ]
-    if [player, player, player] in win_states:
-        return True
-    return False
+    return [player, player, player] in win_states
 
 
 def determine_possible_positions(board: list) -> list[list[int]]:
@@ -101,28 +99,24 @@ def determine_possible_positions(board: list) -> list[list[int]]:
     """
     possible_positions = []
     for i in range(3):
-        for x in range(3):
-            if board[i][x] == GameState.empty:
-                possible_positions.append([i, x])
+        possible_positions.extend(
+            [i, x] for x in range(3) if board[i][x] == GameState.empty
+        )
+
     return possible_positions
 
 
 def evaluate(board):
     if determine_win_state(board, GameState.ai):
-        score = +1
+        return +1
     elif determine_win_state(board, GameState.player):
-        score = -1
+        return -1
     else:
-        score = 0
-    return score
+        return 0
 
 
 def min_max(test_board: list, depth: int, player: GameState):
-    if player == GameState.ai:
-        best = [-1, -1, -math.inf]
-    else:
-        best = [-1, -1, +math.inf]
-
+    best = [-1, -1, -math.inf] if player == GameState.ai else [-1, -1, +math.inf]
     if (
         depth == 0
         or determine_win_state(test_board, GameState.player)
@@ -138,12 +132,13 @@ def min_max(test_board: list, depth: int, player: GameState):
         test_board[x][y] = GameState.empty
         score[0], score[1] = x, y
 
-        if player == GameState.ai:
-            if score[2] > best[2]:
-                best = score
-        else:
-            if score[2] < best[2]:
-                best = score
+        if (
+            player == GameState.ai
+            and score[2] > best[2]
+            or player != GameState.ai
+            and score[2] < best[2]
+        ):
+            best = score
     return best
 
 
@@ -196,25 +191,24 @@ class TicTacToe(Extension):
 
         _board = determine_board_state(components)
 
-        if _board[button_pos[0]][button_pos[1]] == GameState.empty:
-            _board[button_pos[0]][button_pos[1]] = GameState.player
-            if not determine_win_state(_board, GameState.player):
-                possible_positions = determine_possible_positions(_board)
-                # ai pos
-                if len(possible_positions) != 0:
-                    depth = len(possible_positions)
-
-                    move = await asyncio.to_thread(
-                        min_max,
-                        copy.deepcopy(_board),
-                        min(random.choice([4, 6]), depth),
-                        GameState.ai,
-                    )
-                    x, y = move[0], move[1]
-                    _board[x][y] = GameState.ai
-        else:
+        if _board[button_pos[0]][button_pos[1]] != GameState.empty:
             return
 
+        _board[button_pos[0]][button_pos[1]] = GameState.player
+        if not determine_win_state(_board, GameState.player):
+            possible_positions = determine_possible_positions(_board)
+            # ai pos
+            if len(possible_positions) != 0:
+                depth = len(possible_positions)
+
+                move = await asyncio.to_thread(
+                    min_max,
+                    copy.deepcopy(_board),
+                    min(random.choice([4, 6]), depth),
+                    GameState.ai,
+                )
+                x, y = move[0], move[1]
+                _board[x][y] = GameState.ai
         if determine_win_state(_board, GameState.player):
             winner = ctx.author.mention
         elif determine_win_state(_board, GameState.ai):
@@ -227,9 +221,9 @@ class TicTacToe(Extension):
         _board = render_board(_board, disable=winner is not None)
 
         await ctx.edit_origin(
-            content=f"{ctx.author.mention}'s tic tac toe game"
-            if not winner
-            else f"{winner} has won!",
+            content=f"{winner} has won!"
+            if winner
+            else f"{ctx.author.mention}'s tic tac toe game",
             components=spread_to_rows(*_board, max_in_row=3),
         )
 
