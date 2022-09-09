@@ -99,12 +99,8 @@ class GithubMessages(Extension):
 
             # try and remove code blocks
             if line.strip().startswith("```"):
-                if not code_block:
-                    code_block = True
-                    continue
-                else:
-                    code_block = False
-                    continue
+                code_block = not code_block
+                continue
             if not code_block:
                 output.append(line)
             if len(output) == max_lines:
@@ -121,9 +117,10 @@ class GithubMessages(Extension):
         embed = Embed(title=f"PR #{pr.number}: {pr.title}")
         embed.url = pr.html_url
         embed.set_footer(
-            text=f"{pr.user.name if pr.user.name else pr.user.login} - {pr.created_at.ctime()}",
+            text=f"{pr.user.name or pr.user.login} - {pr.created_at.ctime()}",
             icon_url=pr.user.avatar_url,
         )
+
 
         if pr.state == "closed":
             if pr.merged:
@@ -175,14 +172,15 @@ class GithubMessages(Extension):
         embed = Embed(title=f"Issue #{issue.number}: {issue.title}")
         embed.url = issue.html_url
         embed.set_footer(
-            text=f"{issue.user.name if issue.user.name else issue.user.login}",
+            text=f"{issue.user.name or issue.user.login}",
             icon_url=issue.user.avatar_url,
         )
+
 
         if issue.state == "closed":
             embed.description = "🚫 Closed"
             embed.color = MaterialColors.BLUE_GREY
-        if issue.state == "open":
+        elif issue.state == "open":
             if issue.locked:
                 embed.description = "🔒 Locked"
                 embed.color = MaterialColors.ORANGE
@@ -190,7 +188,7 @@ class GithubMessages(Extension):
                 embed.description = "🟢 Open"
                 embed.color = MaterialColors.GREEN
 
-        body = re.sub(r"<!--?.*-->", "", issue.body if issue.body else "_Empty_")
+        body = re.sub(r"<!--?.*-->", "", issue.body or "_Empty_")
 
         embed.description += (
             f"{' - ' if len(issue.labels) != 0 else ''}{', '.join(f'``{l.name.capitalize()}``' for l in issue.labels)}\n"
@@ -254,12 +252,12 @@ class GithubMessages(Extension):
                     print("searching for link")
                     return await self.send_snippet(message)
                 elif data := re.search(r"(?:\s|^)#(\d{1,3})(?:\s|$)", in_data):
-                    issue = await self.get_issue(self.repo, int(data.group(1)))
+                    issue = await self.get_issue(self.repo, int(data[1]))
                     if not issue:
                         return
 
                     if issue.pull_request:
-                        pr = await self.get_pull(self.repo, int(data.group(1)))
+                        pr = await self.get_pull(self.repo, int(data[1]))
                         return await self.send_pr(message, pr)
                     return await self.send_issue(message, issue)
             except github.UnknownObjectException:

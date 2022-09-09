@@ -10,7 +10,6 @@ class Publish(Extension):
                 await message.publish()
             except Exception:
                 print("publish failed")
-                pass
             else:
                 await message.add_reaction("📣")
 

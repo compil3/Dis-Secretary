@@ -80,11 +80,10 @@ class Tags(Extension):
     async def get_tag(self, tag_name: str) -> Tag:
         if tag_name in self.tags:
             return self.tags[tag_name]
-        else:
-            tag_data = await self.redis.get(tag_name)
-            if tag_data:
-                self.tags[tag_name] = Tag(**orjson.loads(tag_data))
-                return self.tags[tag_name]
+        tag_data = await self.redis.get(tag_name)
+        if tag_data:
+            self.tags[tag_name] = Tag(**orjson.loads(tag_data))
+            return self.tags[tag_name]
         return None
 
     async def put_tag(self, tag: Tag):
@@ -104,17 +103,16 @@ class Tags(Extension):
 
         if not edit_mode and name.lower() in self.tags.keys():
             return await ctx.send(f"`{name}` already exists")
-        else:
-            if edit_mode:
-                tag = await self.get_tag(name.lower())
-                tag.modifier_id = ctx.author.id
-                tag.modified = datetime.datetime.now()
-                tag.content = content
-            if not tag:
-                tag = Tag(name, content, ctx.author.id)
+        if edit_mode:
+            tag = await self.get_tag(name.lower())
+            tag.modifier_id = ctx.author.id
+            tag.modified = datetime.datetime.now()
+            tag.content = content
+        if not tag:
+            tag = Tag(name, content, ctx.author.id)
 
-            await self.put_tag(tag)
-            await ctx.send(f"{'Edited' if edit_mode else 'Created'} `{tag.name}`")
+        await self.put_tag(tag)
+        await ctx.send(f"{'Edited' if edit_mode else 'Created'} `{tag.name}`")
 
     @slash_command(name="tag", description="Send a requested tag to this channel")
     @slash_option(

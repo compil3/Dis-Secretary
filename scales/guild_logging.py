@@ -25,9 +25,7 @@ class Logging(Extension):
     @staticmethod
     def base_embed(event: BaseEvent) -> Embed:
         title = event.resolved_name.replace("on_", "").replace("_", " ").title()
-        embed = Embed(title=title, color=BrandColors.BLURPLE)
-
-        return embed
+        return Embed(title=title, color=BrandColors.BLURPLE)
 
     async def send_embed(self, embed: Embed) -> Message:
         channel = await self.bot.fetch_channel(968256006645751808)
@@ -53,20 +51,14 @@ class Logging(Extension):
             emb.add_field(name="New Display Name", value=after.display_name)
 
         if before.roles != after.roles:
-            new_roles: list[Role] = []
-            removed_roles: list[Role] = []
+            removed_roles: list[Role] = [
+                role for role in before.roles if role not in after.roles
+            ]
 
-            # search for removed roles
-            for role in before.roles:
-                if role not in after.roles:
-                    removed_roles.append(role)
 
-            # search for added roles
-            for role in after.roles:
-                if role not in before.roles:
-                    new_roles.append(role)
-
-            if new_roles:
+            if new_roles := [
+                role for role in after.roles if role not in before.roles
+            ]:
                 emb.add_field(
                     name="New Roles", value="\n".join(r.name for r in new_roles)
                 )
@@ -122,10 +114,10 @@ class Logging(Extension):
 
         before_content = event.before.content or "[Empty]"
         if len(before_content) > 1020:
-            before_content = before_content[:1020] + "..."
+            before_content = f"{before_content[:1020]}..."
         after_content = event.after.content or "[Empty]"
         if len(after_content) > 1020:
-            after_content = after_content[:1020] + "..."
+            after_content = f"{after_content[:1020]}..."
         emb.add_field(name="✏️ Message Edited", value=after_content)
         emb.add_field(
             name="Original Content",
@@ -145,7 +137,7 @@ class Logging(Extension):
 
         content = event.message.content or "[Empty]"
         if len(content) > 1020:
-            content = content[:1020] + "..."
+            content = f"{content[:1020]}..."
         emb.add_field(name="🗑️ Message Deleted", value=content)
 
         if event.message.embeds and (count := len(event.message.embeds)) > 0:
